@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Weekly Budget Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  :root {
+    --bg:#F7F6F2; --card:#FFFFFF; --text:#1A1A1A; --muted:#888;
+    --border:#E8E6DF; --blue:#1D6FA4; --blue-light:#EBF4FB;
+    --radius:16px; --radius-sm:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0 0 40px;max-width:430px;margin:0 auto;}
+  .header{background:var(--card);border-bottom:1px solid var(--border);padding:18px 20px 16px;position:sticky;top:0;z-index:10;}
+  .header-top{display:flex;justify-content:space-between;align-items:center;}
+  .app-title{font-size:17px;font-weight:600;}
+  .week-range{font-size:12px;color:var(--muted);margin-top:2px;}
+  .settings-btn{background:var(--bg);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:18px;}
+  .main{padding:16px 16px 0;}
+  .hero-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:20px;margin-bottom:12px;}
+  .hero-nums{display:flex;align-items:baseline;gap:6px;margin-bottom:12px;}
+  .hero-spent{font-family:'DM Mono',monospace;font-size:38px;font-weight:500;letter-spacing:-1px;line-height:1;}
+  .hero-limit{font-size:15px;color:var(--muted);}
+  .bar-track{height:10px;background:var(--bg);border-radius:999px;overflow:hidden;margin-bottom:10px;}
+  .bar-fill{height:100%;border-radius:999px;transition:width 0.5s cubic-bezier(0.4,0,0.2,1),background 0.3s;}
+  .hero-bottom{display:flex;justify-content:space-between;align-items:center;}
+  .pct-txt{font-size:13px;color:var(--muted);}
+  .status-pill{font-size:12px;font-weight:500;padding:4px 12px;border-radius:999px;}
+  .alert-box{border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px;display:none;animation:slideIn 0.3s ease;}
+  .alert-box.show{display:block;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  .alert-box.over{background:#FEF2F2;border:1px solid #FCA5A5;}
+  .alert-box.near{background:#FEF3C7;border:1px solid #FCD34D;}
+  .alert-icon{font-size:20px;margin-bottom:4px;}
+  .alert-title{font-size:15px;font-weight:600;margin-bottom:2px;}
+  .alert-msg{font-size:13px;line-height:1.5;}
+  .alert-box.over .alert-title,.alert-box.over .dismiss-btn{color:#991B1B;}
+  .alert-box.over .alert-msg{color:#B91C1C;}
+  .alert-box.near .alert-title,.alert-box.near .dismiss-btn{color:#92400E;}
+  .alert-box.near .alert-msg{color:#B45309;}
+  .dismiss-btn{margin-top:8px;font-size:12px;font-weight:500;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;}
+  .add-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:18px;margin-bottom:12px;}
+  .section-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;}
+  .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px;}
+  .cat-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);cursor:pointer;font-size:11px;font-weight:500;color:var(--muted);transition:all 0.15s;font-family:'DM Sans',sans-serif;}
+  .cat-btn .icon{font-size:22px;}
+  .cat-btn.sel{border-color:var(--blue);background:var(--blue-light);color:var(--blue);}
+  .cat-btn:active{transform:scale(0.96);}
+  .input-row{display:flex;gap:8px;}
+  .rm-wrap{flex:1;position:relative;}
+  .rm-prefix{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;font-weight:500;color:var(--muted);pointer-events:none;font-family:'DM Mono',monospace;}
+  .rm-wrap input{width:100%;height:48px;padding:0 12px 0 38px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:20px;font-weight:500;color:var(--text);font-family:'DM Mono',monospace;background:var(--bg);outline:none;transition:border-color 0.15s;-webkit-appearance:none;}
+  .rm-wrap input:focus{border-color:var(--blue);background:var(--blue-light);}
+  .rm-wrap input::placeholder{color:#CCC;}
+  .add-btn{height:48px;padding:0 22px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity 0.15s;white-space:nowrap;}
+  .add-btn:active{opacity:0.85;}
+  .breakdown-card,.history-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:18px;margin-bottom:12px;}
+  .cat-row-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+  .cat-row-item:last-child{border-bottom:none;}
+  .cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .cat-row-name{font-size:14px;color:var(--muted);flex:1;}
+  .cat-row-bar{flex:2;height:4px;background:var(--bg);border-radius:999px;overflow:hidden;}
+  .cat-row-bar-fill{height:100%;border-radius:999px;}
+  .cat-row-amt{font-size:14px;font-weight:500;font-family:'DM Mono',monospace;min-width:60px;text-align:right;}
+  .h-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+  .h-item:last-child{border-bottom:none;}
+  .h-left{display:flex;align-items:center;gap:10px;}
+  .h-icon{font-size:18px;width:34px;height:34px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;}
+  .h-cat{font-size:14px;font-weight:500;}
+  .h-time{font-size:11px;color:var(--muted);margin-top:1px;}
+  .h-right{display:flex;align-items:center;gap:8px;}
+  .h-amt{font-size:15px;font-weight:500;font-family:'DM Mono',monospace;}
+  .del-btn{background:#FEF2F2;border:1px solid #FCA5A5;cursor:pointer;font-size:13px;font-weight:600;padding:6px 11px;border-radius:8px;color:#DC2626;font-family:'DM Sans',sans-serif;}
+  .del-btn:active{background:#FEE2E2;}
+  .empty{font-size:13px;color:var(--muted);text-align:center;padding:10px 0;}
+  .history-hint{font-size:11px;color:var(--muted);text-align:center;margin-top:10px;}
+  .bottom-actions{display:flex;gap:8px;padding:0 16px;}
+  .action-btn{flex:1;height:44px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .action-btn:active{background:var(--bg);}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:flex-end;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--card);border-radius:20px 20px 0 0;padding:20px 20px 40px;width:100%;max-width:430px;animation:slideUp 0.3s ease;}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .modal-title{font-size:16px;font-weight:600;margin-bottom:16px;}
+  .modal-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .modal-label{font-size:14px;color:var(--muted);flex:1;}
+  .modal-input-wrap{position:relative;width:120px;}
+  .modal-prefix{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted);font-family:'DM Mono',monospace;}
+  .modal-input-wrap input{width:100%;height:40px;padding:0 10px 0 32px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-family:'DM Mono',monospace;font-weight:500;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;}
+  .modal-input-wrap input:focus{border-color:var(--blue);}
+  .modal-save{width:100%;height:48px;margin-top:8px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+  .modal-cancel{width:100%;height:44px;margin-top:8px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="app-title">💰 Weekly Budget</div>
+      <div class="week-range" id="weekRange">Loading...</div>
+    </div>
+    <button class="settings-btn" onclick="openSettings()">⚙️</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="hero-card">
+    <div class="hero-nums">
+      <div class="hero-spent" id="heroSpent">RM 0</div>
+      <div class="hero-limit" id="heroLimit">/ RM 400</div>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="mainBar" style="width:0%;background:#1D9E75"></div></div>
+    <div class="hero-bottom">
+      <div class="pct-txt" id="pctTxt">0% used · RM 400 remaining</div>
+      <div class="status-pill" id="statusPill" style="background:#EDFAF4;color:#0F6E56">On track ✓</div>
+    </div>
+  </div>
+
+  <div class="alert-box over" id="overAlert">
+    <div class="alert-icon">🚨</div>
+    <div class="alert-title">Weekly limit exceeded!</div>
+    <div class="alert-msg" id="overMsg">You have gone over your weekly budget.</div>
+    <button class="dismiss-btn" onclick="document.getElementById('overAlert').classList.remove('show')">Dismiss</button>
+  </div>
+
+  <div class="alert-box near" id="nearAlert">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-title">Almost at your limit!</div>
+    <div class="alert-msg" id="nearMsg">You're approaching your weekly budget.</div>
+    <button class="dismiss-btn" onclick="document.getElementById('nearAlert').classList.remove('show')">Dismiss</button>
+  </div>
+
+  <div class="add-card">
+    <div class="section-title">Add expense</div>
+    <div class="cat-grid" id="catGrid"></div>
+    <div class="input-row">
+      <div class="rm-wrap">
+        <span class="rm-prefix">RM</span>
+        <input type="number" id="amtInput" placeholder="0" min="0" step="any" inputmode="decimal" />
+      </div>
+      <button class="add-btn" onclick="addExp()">+ Add</button>
+    </div>
+  </div>
+
+  <div class="breakdown-card">
+    <div class="section-title">Breakdown</div>
+    <div id="breakdown"><div class="empty">No spending yet this week</div></div>
+  </div>
+
+  <div class="history-card">
+    <div class="section-title">Recent entries</div>
+    <div id="historyList"><div class="empty">No entries yet</div></div>
+  </div>
+</div>
+
+<div class="bottom-actions">
+  <button class="action-btn" onclick="resetWeek()">🔄 New week</button>
+  <button class="action-btn" onclick="openSettings()">⚙️ Edit limit</button>
+</div>
+
+<div class="modal-overlay" id="settingsModal" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-title">Edit weekly limit</div>
+    <div class="modal-row">
+      <div class="modal-label">Weekly budget</div>
+      <div class="modal-input-wrap">
+        <span class="modal-prefix">RM</span>
+        <input type="number" id="limitInput" value="400" min="1" inputmode="decimal" />
+      </div>
+    </div>
+    <button class="modal-save" onclick="saveLimit()">Save</button>
+    <button class="modal-cancel" onclick="document.getElementById('settingsModal').classList.remove('show')">Cancel</button>
+  </div>
+</div>
+
+<script>
+var CATS = [
+  { id:'food',      label:'Food',      icon:'🍜', color:'#F59E0B' },
+  { id:'transport', label:'Transport', icon:'🚗', color:'#3B82F6' },
+  { id:'shopping',  label:'Shopping',  icon:'🛍️', color:'#EC4899' },
+  { id:'bills',     label:'Bills',     icon:'📄', color:'#10B981' },
+  { id:'health',    label:'Health',    icon:'💊', color:'#EF4444' },
+  { id:'others',    label:'Others',    icon:'📦', color:'#8B5CF6' },
+];
+
+var weekLimit = 400;
+var history   = [];
+var selCat    = null;
+var counter   = 0;
+
+/* ── storage helpers ── */
+function ld(k){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){ return null; } }
+function sv(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+
+/* ── week helpers ── */
+function getWeekId(){
+  var d=new Date(), j=new Date(d.getFullYear(),0,1);
+  return d.getFullYear()+'-W'+Math.ceil(((d-j)/86400000+j.getDay()+1)/7);
+}
+function getWeekRange(){
+  var d=new Date();
+  var mon=new Date(d); mon.setDate(d.getDate()-((d.getDay()+6)%7));
+  var sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  var f=function(x){ return x.toLocaleDateString('en-MY',{day:'numeric',month:'short'}); };
+  return f(mon)+' – '+f(sun);
+}
+
+/* ── derive spending totals fresh from history every time ── */
+function calcSpending(){
+  var s={};
+  CATS.forEach(function(c){ s[c.id]=0; });
+  history.forEach(function(h){ s[h.cat]=(s[h.cat]||0)+h.amt; });
+  return s;
+}
+function grandTotal(sp){
+  return CATS.reduce(function(t,c){ return t+(sp[c.id]||0); },0);
+}
+
+/* ── init ── */
+function init(){
+  // clear any stale data from old versions that lacked proper ids
+  localStorage.removeItem('wbt_spend');
+  localStorage.removeItem('wbt_nid');
+
+  weekLimit = ld('wbt_limit') || 400;
+  var savedWeek = ld('wbt_week');
+  var curr = getWeekId();
+
+  if(savedWeek !== curr){
+    history=[]; counter=0;
+    sv('wbt_week', curr);
+    sv('wbt_hist', history);
+    sv('wbt_ctr',  counter);
+  } else {
+    history = ld('wbt_hist') || [];
+    counter = ld('wbt_ctr')  || 0;
+    // repair any entries that somehow lost their id
+    history.forEach(function(h,i){
+      if(h.id === undefined || h.id === null){ h.id = ++counter; }
+    });
+    sv('wbt_hist', history);
+    sv('wbt_ctr',  counter);
+  }
+
+  document.getElementById('weekRange').textContent = getWeekRange();
+  renderCats();
+  renderAll();
+}
+
+/* ── render category picker ── */
+function renderCats(){
+  document.getElementById('catGrid').innerHTML = CATS.map(function(c){
+    return '<button class="cat-btn'+(selCat===c.id?' sel':'')+'" onclick="pickCat(\''+c.id+'\')">'
+          +'<span class="icon">'+c.icon+'</span>'+c.label+'</button>';
+  }).join('');
+}
+function pickCat(id){ selCat=id; renderCats(); document.getElementById('amtInput').focus(); }
+
+/* ── full re-render ── */
+function renderAll(){
+  var sp  = calcSpending();
+  var tot = grandTotal(sp);
+  var pct = Math.min((tot/weekLimit)*100, 100);
+  var rem = Math.max(weekLimit-tot, 0);
+  var over= tot > weekLimit;
+  var barColor = over ? '#DC2626' : pct>=80 ? '#D97706' : '#1D9E75';
+
+  document.getElementById('heroSpent').textContent     = 'RM '+tot.toFixed(0);
+  document.getElementById('heroLimit').textContent     = '/ RM '+weekLimit;
+  document.getElementById('mainBar').style.width       = pct.toFixed(1)+'%';
+  document.getElementById('mainBar').style.background  = barColor;
+  document.getElementById('pctTxt').textContent        =
+    pct.toFixed(0)+'% used · '+(over?'RM '+(tot-weekLimit).toFixed(0)+' over':'RM '+rem.toFixed(0)+' remaining');
+
+  var pill=document.getElementById('statusPill');
+  if(over){       pill.textContent='Over budget ✗'; pill.style.background='#FEF2F2'; pill.style.color='#991B1B'; }
+  else if(pct>=80){pill.textContent='Near limit ⚠';  pill.style.background='#FEF3C7'; pill.style.color='#92400E'; }
+  else{           pill.textContent='On track ✓';    pill.style.background='#EDFAF4'; pill.style.color='#0F6E56'; }
+
+  /* breakdown */
+  var active=CATS.filter(function(c){ return (sp[c.id]||0)>0; });
+  var bd=document.getElementById('breakdown');
+  if(!active.length){
+    bd.innerHTML='<div class="empty">No spending yet this week</div>';
+  } else {
+    bd.innerHTML=active.map(function(c){
+      var a=sp[c.id]||0, cp=tot>0?((a/tot)*100).toFixed(0):0;
+      return '<div class="cat-row-item">'
+        +'<div class="cat-dot" style="background:'+c.color+'"></div>'
+        +'<div class="cat-row-name">'+c.icon+' '+c.label+'</div>'
+        +'<div class="cat-row-bar"><div class="cat-row-bar-fill" style="width:'+cp+'%;background:'+c.color+'"></div></div>'
+        +'<div class="cat-row-amt">RM '+a.toFixed(0)+'</div>'
+        +'</div>';
+    }).join('');
+  }
+
+  /* history */
+  var hl=document.getElementById('historyList');
+  if(!history.length){
+    hl.innerHTML='<div class="empty">No entries yet</div>';
+  } else {
+    hl.innerHTML=history.slice(0,30).map(function(h){
+      var c=CATS.find(function(x){ return x.id===h.cat; });
+      /* data-id stored on the button — no index involved */
+      return '<div class="h-item">'
+        +'<div class="h-left">'
+          +'<div class="h-icon">'+c.icon+'</div>'
+          +'<div><div class="h-cat">'+c.label+'</div><div class="h-time">'+h.time+'</div></div>'
+        +'</div>'
+        +'<div class="h-right">'
+          +'<div class="h-amt">RM '+h.amt.toFixed(0)+'</div>'
+          +'<button class="del-btn" data-id="'+h.id+'">✕</button>'
+        +'</div>'
+        +'</div>';
+    }).join('')+'<div class="history-hint">Tap ✕ to remove a wrong entry</div>';
+
+    /* attach listeners AFTER innerHTML is set */
+    document.querySelectorAll('.del-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        deleteEntry(Number(this.getAttribute('data-id')));
+      });
+    });
+  }
+}
+
+/* ── delete by unique id ── */
+function deleteEntry(id){
+  var idx=history.findIndex(function(h){ return h.id===id; });
+  if(idx===-1){ alert('Entry not found.'); return; }
+  var entry=history[idx];
+  var c=CATS.find(function(x){ return x.id===entry.cat; });
+  if(!confirm('Remove RM'+entry.amt.toFixed(0)+' from '+(c?c.label:entry.cat)+'?')) return;
+  history.splice(idx,1);
+  sv('wbt_hist', history);
+  document.getElementById('overAlert').classList.remove('show');
+  document.getElementById('nearAlert').classList.remove('show');
+  renderAll();
+}
+
+/* ── add expense ── */
+function addExp(){
+  var amt=parseFloat(document.getElementById('amtInput').value);
+  if(!amt||amt<=0){ alert('Please enter a valid amount.'); return; }
+  if(!selCat){      alert('Please select a category first.'); return; }
+
+  var prevTot = grandTotal(calcSpending());
+  counter++;
+  var now=new Date();
+  history.unshift({
+    id:   counter,
+    cat:  selCat,
+    amt:  amt,
+    time: now.toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'})
+         +' · '+now.toLocaleDateString('en-MY',{weekday:'short',day:'numeric',month:'short'})
+  });
+  if(history.length>50) history=history.slice(0,50);
+  sv('wbt_hist', history);
+  sv('wbt_ctr',  counter);
+
+  document.getElementById('amtInput').value='';
+  renderAll();
+  checkWarnings(prevTot);
+}
+
+/* ── warnings ── */
+function checkWarnings(prevTot){
+  var tot=grandTotal(calcSpending());
+  var pct=(tot/weekLimit)*100, prevPct=(prevTot/weekLimit)*100;
+  document.getElementById('overAlert').classList.remove('show');
+  document.getElementById('nearAlert').classList.remove('show');
+  if(tot>weekLimit){
+    document.getElementById('overMsg').textContent=
+      'You\'ve spent RM'+tot.toFixed(0)+' — that\'s RM'+(tot-weekLimit).toFixed(0)+' over your RM'+weekLimit+' limit!';
+    setTimeout(function(){ document.getElementById('overAlert').classList.add('show'); },50);
+  } else if(pct>=80 && prevPct<80){
+    document.getElementById('nearMsg').textContent=
+      'You\'ve used RM'+tot.toFixed(0)+' of RM'+weekLimit+' ('+pct.toFixed(0)+'%). Only RM'+(weekLimit-tot).toFixed(0)+' left!';
+    setTimeout(function(){ document.getElementById('nearAlert').classList.add('show'); },50);
+  }
+}
+
+/* ── reset week ── */
+function resetWeek(){
+  if(!confirm('Reset all spending for this week?')) return;
+  history=[]; counter=0;
+  sv('wbt_hist', history);
+  sv('wbt_ctr',  counter);
+  sv('wbt_week', getWeekId());
+  document.getElementById('overAlert').classList.remove('show');
+  document.getElementById('nearAlert').classList.remove('show');
+  renderAll();
+}
+
+/* ── settings modal ── */
+function openSettings(){ document.getElementById('limitInput').value=weekLimit; document.getElementById('settingsModal').classList.add('show'); }
+function closeModalOutside(e){ if(e.target===document.getElementById('settingsModal')) document.getElementById('settingsModal').classList.remove('show'); }
+function saveLimit(){
+  var v=parseFloat(document.getElementById('limitInput').value);
+  if(!v||v<=0){ alert('Enter a valid limit.'); return; }
+  weekLimit=v; sv('wbt_limit',weekLimit);
+  document.getElementById('settingsModal').classList.remove('show');
+  renderAll();
+}
+
+init();
+</script>
+</body>
+</html>
